@@ -1,1 +1,14 @@
-{"name":"web3-crypto-futures-ai","version":"1.0.0","type":"module","scripts":{"start":"node server.js"},"engines":{"node":">=20"}}
+{
+  "name": "web3-crypto-futures-ai",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "pg": "^8.13.1"
+  }
+}

@@ -10,55 +10,71 @@ function animateLoop(state){
   $('#loopState').textContent=(state||'RUNNING')+' • PHASE '+(phase+1)+'/6';
 }
 
-async function refresh(){
+async function fetchJson(url,timeout=5000){
+  const c=new AbortController();
+  const t=setTimeout(()=>c.abort(),timeout);
   try{
-    const [sr,jr,br]=await Promise.all([
-      fetch('/api/scan',{cache:'no-store'}),
-      fetch('/api/journal',{cache:'no-store'}),
-      fetch('/api/bitget/status',{cache:'no-store'})
-    ]);
-    const d=await sr.json();
-    const jd=await jr.json();
-    const bg=await br.json();
+    const r=await fetch(url,{cache:'no-store',signal:c.signal});
+    if(!r.ok)throw new Error(url+' HTTP '+r.status);
+    return await r.json();
+  }finally{
+    clearTimeout(t);
+  }
+}
 
-    const mk=d.markets||[];
-    const pos=d.portfolio?.positions||[];
-    const risk=Number(d.portfolio?.openRiskPct||0);
-    const a=d.portfolio?.account||{};
-    const z=jd.analytics||{};
-    const mm=d.portfolio?.model?.metrics||{};
-    const realized=Number(a.realizedPnL||0);
-    const open=Number(a.openPnL||0);
-    const pnl=realized+open;
+function renderScan(d){
+  const mk=d.markets||[];
+  const pos=d.portfolio?.positions||[];
+  const risk=Number(d.portfolio?.openRiskPct||0);
+  const a=d.portfolio?.account||{};
+  const model=d.portfolio?.model||{};
+  const mm=model.metrics||{};
+  const realized=Number(a.realizedPnL||0);
+  const open=Number(a.openPnL||0);
 
-    $('#scannerState').textContent='SCANNER '+(d.scanner?.state||'UNKNOWN')+' • '+(d.scanner?.feed||'');
-    $('#bitgetState').textContent=bg.connected?'BITGET CONNECTED':'BITGET ERROR';
-    $('#marketCount').textContent=mk.length;
-    $('#positionCount').textContent=pos.length;
-    $('#riskNow').textContent=risk.toFixed(2)+'%';
-    $('#evalCount').textContent=z.trades||0;
-    $('#netR').textContent=Number(z.netR||0).toFixed(2)+'R';
+  $('#scannerState').textContent='SCANNER '+(d.scanner?.state||'UNKNOWN')+' • '+(d.scanner?.feed||'');
+  $('#marketCount').textContent=mk.length;
+  $('#positionCount').textContent=pos.length;
+  $('#riskNow').textContent=risk.toFixed(2)+'%';
+  $('#evalCount').textContent=Number(mm.samples||0);
+  $('#netR').textContent=Number(mm.netR||0).toFixed(2)+'R';
 
-    $('#startingEquity').textContent=money(a.startingBalance||0);
-    $('#equity').textContent=money(a.equity||0);
-    $('#realizedPnl').textContent=(realized>=0?'+':'')+money(realized);
-    $('#realizedPnl').className=realized>=0?'good':'bad';
-    $('#runningPnl').textContent=(open>=0?'+':'')+money(open);
-    $('#runningPnl').className=open>=0?'good':'bad';
-    $('#winrate').textContent=Number(mm.winRate??z.winrate??0).toFixed(1)+'%';
-    $('#profitFactor').textContent=Number(mm.profitFactor??0).toFixed(2);
-    $('#drawdown').textContent=Number(mm.maxDrawdownR??0).toFixed(2)+'R';
+  $('#startingEquity').textContent=money(a.startingBalance||0);
+  $('#equity').textContent=money(a.equity||0);
+  $('#realizedPnl').textContent=(realized>=0?'+':'')+money(realized);
+  $('#realizedPnl').className=realized>=0?'good':'bad';
+  $('#runningPnl').textContent=(open>=0?'+':'')+money(open);
+  $('#runningPnl').className=open>=0?'good':'bad';
+  $('#winrate').textContent=Number(mm.winRate||0).toFixed(1)+'%';
+  $('#profitFactor').textContent=Number(mm.profitFactor||0).toFixed(2);
+  $('#drawdown').textContent=Number(mm.maxDrawdownR||0).toFixed(2)+'R';
 
-    $('#engineState').textContent=d.engine||'AI';
-    $('#stamp').textContent=d.ts?new Date(d.ts).toLocaleString():'—';
-    $('#modelState').textContent=d.portfolio?.model?.state||'COLLECTING';
-    animateLoop(d.scanner?.state);
+  $('#engineState').textContent=d.engine||'AI';
+  $('#stamp').textContent=d.ts?new Date(d.ts).toLocaleString():'—';
+  $('#modelState').textContent=model.state||'COLLECTING';
+  animateLoop(d.scanner?.state);
+}
+
+let refreshing=false;
+async function refresh(){
+  if(refreshing)return;
+  refreshing=true;
+  try{
+    const d=await fetchJson('/api/scan',5000);
+    renderScan(d);
+
+    fetchJson('/api/bitget/status',4000)
+      .then(bg=>{$('#bitgetState').textContent=bg.connected?'BITGET CONNECTED':'BITGET ERROR';})
+      .catch(()=>{$('#bitgetState').textContent='BITGET STATUS WAIT';});
   }catch(e){
-    $('#scannerState').textContent='SCANNER ERROR';
+    $('#scannerState').textContent='SCANNER RETRYING';
+  }finally{
+    refreshing=false;
   }
 }
 
 $('#scan').onclick=refresh;
+animateLoop('RUNNING');
 refresh();
 setInterval(refresh,10000);
 setInterval(()=>animateLoop('RUNNING'),5000);

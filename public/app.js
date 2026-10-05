@@ -23,18 +23,16 @@ async function fetchJson(url,timeout=5000){
 }
 
 function renderScan(d){
-  const mk=d.markets||[];
-  const pos=d.portfolio?.positions||[];
-  const risk=Number(d.portfolio?.openRiskPct||0);
-  const a=d.portfolio?.account||{};
-  const model=d.portfolio?.model||{};
+  const risk=Number(d.openRiskPct||0);
+  const a=d.account||{};
+  const model=d.model||{};
   const mm=model.metrics||{};
   const realized=Number(a.realizedPnL||0);
   const open=Number(a.openPnL||0);
 
   $('#scannerState').textContent='SCANNER '+(d.scanner?.state||'UNKNOWN')+' • '+(d.scanner?.feed||'');
-  $('#marketCount').textContent=mk.length;
-  $('#positionCount').textContent=pos.length;
+  $('#marketCount').textContent=Number(d.marketCount||0);
+  $('#positionCount').textContent=Number(d.positionCount||0);
   $('#riskNow').textContent=risk.toFixed(2)+'%';
   $('#evalCount').textContent=Number(mm.samples||0);
   $('#netR').textContent=Number(mm.netR||0).toFixed(2)+'R';
@@ -60,7 +58,7 @@ async function refresh(){
   if(refreshing)return;
   refreshing=true;
   try{
-    const d=await fetchJson('/api/scan',5000);
+    const d=await fetchJson('/api/dashboard',5000);
     renderScan(d);
 
     fetchJson('/api/bitget/status',4000)

@@ -58,5 +58,5 @@ async function refresh(){
 
 $('#scan').onclick=refresh;
 refresh();
-setInterval(refresh,60000);
+setInterval(refresh,10000);
 setInterval(()=>animateLoop('RUNNING'),5000);

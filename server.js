@@ -69,8 +69,9 @@ function liquidationSafe(side,liq,sl,riskDistance){
 function integrityAudit(d,markets,lab){
   let issues=[],mmap=Object.fromEntries(markets.map(x=>[x.symbol,x])),ids=new Set(d.journal.map(x=>x.id));
   for(let p of d.positions){
-    let ex=p.execution||{},riskCap=num(p.equityAtOpen)*.02;
-    if(num(p.riskAmount)>riskCap+.01)issues.push({code:'RISK_OVER_2PCT',id:p.id,symbol:p.symbol,value:p.riskAmount,cap:riskCap});
+    let ex=p.execution||{},equityAtOpen=num(p.equityAtOpen),hasEquityAtOpen=equityAtOpen>0,riskCap=hasEquityAtOpen?equityAtOpen*.02:null,declaredRiskPct=num(p.riskPct);
+    if(hasEquityAtOpen&&num(p.riskAmount)>riskCap+.01)issues.push({code:'RISK_OVER_2PCT',id:p.id,symbol:p.symbol,value:p.riskAmount,cap:riskCap});
+    else if(!hasEquityAtOpen&&declaredRiskPct>2.0001)issues.push({code:'RISK_PCT_OVER_2PCT',id:p.id,symbol:p.symbol,riskPct:declaredRiskPct});
     if(p.realismVersion==='bitget-realism-v1'){
       let minQty=num(ex.minTradeNum),minNotional=num(ex.minTradeUSDT),notional=num(p.notionalAtOpen,num(p.quantity)*num(p.entry));
       if(num(p.quantity)<minQty-1e-12||notional<minNotional-.0001)issues.push({code:'MIN_ORDER_VIOLATION',id:p.id,symbol:p.symbol,quantity:p.quantity,notional,minQty,minNotional});

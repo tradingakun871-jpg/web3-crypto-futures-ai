@@ -41,8 +41,10 @@ async function refresh(){
 
     $('#startingEquity').textContent=money(a.startingBalance||0);
     $('#equity').textContent=money(a.equity||0);
-    $('#pnl').textContent=(pnl>=0?'+':'')+money(pnl);
-    $('#pnl').className=pnl>=0?'good':'bad';
+    $('#realizedPnl').textContent=(realized>=0?'+':'')+money(realized);
+    $('#realizedPnl').className=realized>=0?'good':'bad';
+    $('#runningPnl').textContent=(open>=0?'+':'')+money(open);
+    $('#runningPnl').className=open>=0?'good':'bad';
     $('#winrate').textContent=Number(mm.winRate??z.winrate??0).toFixed(1)+'%';
     $('#profitFactor').textContent=Number(mm.profitFactor??0).toFixed(2);
     $('#drawdown').textContent=Number(mm.maxDrawdownR??0).toFixed(2)+'R';

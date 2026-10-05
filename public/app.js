@@ -39,6 +39,7 @@ async function refresh(){
     $('#evalCount').textContent=z.trades||0;
     $('#netR').textContent=Number(z.netR||0).toFixed(2)+'R';
 
+    $('#startingEquity').textContent=money(a.startingBalance||0);
     $('#equity').textContent=money(a.equity||0);
     $('#pnl').textContent=(pnl>=0?'+':'')+money(pnl);
     $('#pnl').className=pnl>=0?'good':'bad';

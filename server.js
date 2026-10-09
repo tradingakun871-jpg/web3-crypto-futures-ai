@@ -250,8 +250,10 @@ function challengerLab(j){
   }
   candidates.push(...optionalCandidates);
   candidates.sort((a,b)=>b.improvementScore-a.improvementScore);
-  let winner=candidates.find(x=>x.improves&&x.aiSource==='OPENAI'&&!x.optionalTf)||candidates.find(x=>x.improves&&!x.optionalTf)||null;
-  return{state:winner?'PROMOTED':'SHADOW_TEST',mode:winner?(winner.aiSource==='OPENAI'?'OPENAI_AUTO_PAPER_EXECUTION':'ACTIVE_WALK_FORWARD_GUARDED'):'SHADOW_ONLY',baseline,candidates:candidates.slice(0,12),activeRule:winner?{id:winner.id,label:winner.label,...winner.rule,validatedMetrics:winner.metrics,retention:winner.retention,source:winner.aiSource||'INTERNAL'}:null,optionalTfRules,controller:winner?.aiSource==='OPENAI'?'OPENAI':'INTERNAL_FALLBACK',aiResearch:aiResearchSummary(),hardSafetyLocked:true,minValidationSamples:30,promotionGate:{method:'WALK_FORWARD_70_30',forwardMinSamples:8,pfDeltaMin:.15,expectancyDeltaMin:.03,winRateNoWorse:true,drawdownNoWorse:true,netRPositive:true,retentionMinPct:25}};
+  let apiCreditExhausted=aiResearchState.status==='ERROR'&&/credit_balance_exhausted|insufficient_quota|no credits remaining/i.test(String(aiResearchState.lastError||''));
+   let temporaryRangingFallback=apiCreditExhausted?candidates.find(x=>x.id==='exclude-regime-RANGING'&&x.metrics.samples>=8&&x.metrics.winRate>=70&&x.metrics.profitFactor>2.5&&x.metrics.expectancyR>0&&x.metrics.netR>0):null;
+   let winner=temporaryRangingFallback||candidates.find(x=>x.improves&&x.aiSource==='OPENAI'&&!x.optionalTf)||candidates.find(x=>x.improves&&!x.optionalTf)||null;
+  return{state:winner?'PROMOTED':'SHADOW_TEST',mode:winner?(winner.aiSource==='OPENAI'?'OPENAI_AUTO_PAPER_EXECUTION':'ACTIVE_WALK_FORWARD_GUARDED'):'SHADOW_ONLY',baseline,candidates:candidates.slice(0,12),activeRule:winner?{id:winner.id,label:winner.label,...winner.rule,validatedMetrics:winner.metrics,retention:winner.retention,source:temporaryRangingFallback===winner?'TEMPORARY_CREDIT_FALLBACK':(winner.aiSource||'INTERNAL')}:null,optionalTfRules,controller:temporaryRangingFallback===winner?'TEMPORARY_CREDIT_FALLBACK':winner?.aiSource==='OPENAI'?'OPENAI':'INTERNAL_FALLBACK',aiResearch:aiResearchSummary(),hardSafetyLocked:true,minValidationSamples:30,promotionGate:{method:'WALK_FORWARD_70_30',forwardMinSamples:8,pfDeltaMin:.15,expectancyDeltaMin:.03,winRateNoWorse:true,drawdownNoWorse:true,netRPositive:true,retentionMinPct:25}};
 }
 function applyChallenger(m,lab){
   m.challenger={state:lab.state,mode:lab.mode,ruleId:lab.activeRule?.id||null,decision:'BASELINE'};

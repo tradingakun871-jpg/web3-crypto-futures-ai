@@ -257,6 +257,11 @@ function challengerLab(j){
    let strongPoiRule={minScore:70,requireTf:'M5',requireRegime:'RANGING',requireSetup:'Liquidity Sweep + Structure',requireSmcToken:'FVG'};
    let strongPoiCandidate=challengerCandidate('user-strong-poi-m5','User selected STRONG POI — Range Liquidity + FVG M5',strongPoiRule,rows,baseline);
    candidates.push(strongPoiCandidate);
+   // Track BOS + Displacement + Structure as a separate user-selected PAPER challenger.
+   // Five historical trades are insufficient for direct execution promotion.
+   let bosStructureRule={requireSetup:'BOS + Displacement + Structure'};
+   let bosStructureCandidate=challengerCandidate('user-bos-displacement-structure','User selected BOS + Displacement + Structure',bosStructureRule,rows,baseline);
+   candidates.push(bosStructureCandidate);
    let userPoiActive=strongPoiCandidate.metrics.samples>=8&&strongPoiCandidate.metrics.winRate>=70&&strongPoiCandidate.metrics.profitFactor>2.5&&strongPoiCandidate.metrics.expectancyR>0&&strongPoiCandidate.metrics.netR>0;
    let userPoiFallback=userPoiActive?strongPoiCandidate:null;
    let winner=userPoiFallback||temporaryRangingFallback||candidates.find(x=>x.improves&&x.aiSource==='OPENAI'&&!x.optionalTf)||candidates.find(x=>x.improves&&!x.optionalTf)||null;

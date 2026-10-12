@@ -264,8 +264,16 @@ function challengerLab(j){
    candidates.push(bosStructureCandidate);
    let userPoiActive=strongPoiCandidate.metrics.samples>=8&&strongPoiCandidate.metrics.winRate>=70&&strongPoiCandidate.metrics.profitFactor>2.5&&strongPoiCandidate.metrics.expectancyR>0&&strongPoiCandidate.metrics.netR>0;
    let userPoiFallback=userPoiActive?strongPoiCandidate:null;
-   let winner=userPoiFallback||temporaryRangingFallback||candidates.find(x=>x.improves&&x.aiSource==='OPENAI'&&!x.optionalTf)||candidates.find(x=>x.improves&&!x.optionalTf)||null;
-  return{state:winner?'PROMOTED':'SHADOW_TEST',mode:winner?(winner.aiSource==='OPENAI'?'OPENAI_AUTO_PAPER_EXECUTION':'ACTIVE_WALK_FORWARD_GUARDED'):'SHADOW_ONLY',baseline,candidates:candidates.slice(0,12),activeRule:winner?{id:winner.id,label:winner.label,...winner.rule,validatedMetrics:winner.metrics,retention:winner.retention,source:userPoiFallback===winner?'USER_APPROVED_PAPER_POI':temporaryRangingFallback===winner?'TEMPORARY_CREDIT_FALLBACK':(winner.aiSource||'INTERNAL')}:null,optionalTfRules,controller:userPoiFallback===winner?'USER_APPROVED_PAPER_POI':temporaryRangingFallback===winner?'TEMPORARY_CREDIT_FALLBACK':winner?.aiSource==='OPENAI'?'OPENAI':'INTERNAL_FALLBACK',aiResearch:aiResearchSummary(),hardSafetyLocked:true,minValidationSamples:30,promotionGate:{method:'WALK_FORWARD_70_30',forwardMinSamples:8,pfDeltaMin:.15,expectancyDeltaMin:.03,winRateNoWorse:true,drawdownNoWorse:true,netRPositive:true,retentionMinPct:25}};
+   // User-approved temporary three-way PAPER trial; keep each candidate's metrics separate.
+   // Only use rules actually evaluated on forward data. Do not merge MSS and CHOCH evidence.
+   let trialCandidates=[
+     ...candidates.filter(x=>x.aiSource==='OPENAI'&&/STRONG POI.*range liquidity-FVG M5/i.test(x.label)),
+     ...candidates.filter(x=>x.id==='require-MSS'),
+     ...candidates.filter(x=>x.id==='require-CHOCH')
+   ];
+   let trialWinner=trialCandidates.find(x=>x.metrics.samples>=12&&x.metrics.winRate>=60&&x.metrics.profitFactor>=1.8&&x.metrics.expectancyR>0&&x.metrics.netR>0)||null;
+   let winner=trialWinner||userPoiFallback||candidates.find(x=>x.improves&&x.aiSource==='OPENAI'&&!x.optionalTf)||candidates.find(x=>x.improves&&!x.optionalTf)||null;
+  return{state:winner?'PROMOTED':'SHADOW_TEST',mode:winner?(winner.aiSource==='OPENAI'?'OPENAI_AUTO_PAPER_EXECUTION':'ACTIVE_WALK_FORWARD_GUARDED'):'SHADOW_ONLY',baseline,candidates:candidates.slice(0,12),activeRule:winner?{id:winner.id,label:winner.label,...winner.rule,validatedMetrics:winner.metrics,retention:winner.retention,source:trialWinner===winner?'USER_APPROVED_THREE_METHOD_PAPER_TRIAL':userPoiFallback===winner?'USER_APPROVED_PAPER_POI':(winner.aiSource||'INTERNAL')}:null,optionalTfRules,controller:trialWinner===winner?'USER_APPROVED_THREE_METHOD_PAPER_TRIAL':userPoiFallback===winner?'USER_APPROVED_PAPER_POI':winner?.aiSource==='OPENAI'?'OPENAI':'INTERNAL_FALLBACK',aiResearch:aiResearchSummary(),hardSafetyLocked:true,minValidationSamples:30,promotionGate:{method:'WALK_FORWARD_70_30',forwardMinSamples:8,pfDeltaMin:.15,expectancyDeltaMin:.03,winRateNoWorse:true,drawdownNoWorse:true,netRPositive:true,retentionMinPct:25}};
 }
 function applyChallenger(m,lab){
   m.challenger={state:lab.state,mode:lab.mode,ruleId:lab.activeRule?.id||null,decision:'BASELINE'};
